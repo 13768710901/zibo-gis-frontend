@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生成PWA图标</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a2e;
+      color: #e0e0e0;
+    }
+    h1 { color: #3b82f6; }
+    .info {
+      background: rgba(59, 130, 246, 0.1);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover { background: #2563eb; }
+    .sizes {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .icon-item {
+      text-align: center;
+      background: rgba(255,255,255,0.05);
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .icon-item img {
+      max-width: 100%;
+      height: auto;
+    }
+    .icon-item span {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 PWA图标生成工具</h1>
+  
+  <div class="info">
+    <p>点击按钮生成各种尺寸的PWA图标，然后右键保存到 public 文件夹。</p>
+    <p>或者直接点击"下载全部"批量下载。</p>
+  </div>
+  
+  <button onclick="generateIcons()">生成图标</button>
+  <button onclick="downloadAll()">下载全部</button>
+  
+  <div class="sizes" id="iconContainer"></div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const generatedIcons = {};
+
+    function generateIcons() {
+      const container = document.getElementById('iconContainer');
+      container.innerHTML = '';
+      
+      const svgContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+          <defs>
+            <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1a1a2e"/>
+              <stop offset="100%" style="stop-color:#16213e"/>
+            </linearGradient>
+            <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#3b82f6"/>
+              <stop offset="100%" style="stop-color:#2563eb"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" fill="url(#bg)" rx="100"/>
+          <circle cx="256" cy="256" r="80" fill="url(#accent)" opacity="0.2"/>
+          <circle cx="256" cy="256" r="40" fill="url(#accent)"/>
+          <circle cx="256" cy="256" r="120" fill="none" stroke="#3b82f6" stroke-width="4" opacity="0.5"/>
+          <circle cx="330" cy="180" r="25" fill="#ef4444"/>
+          <text x="330" y="190" text-anchor="middle" fill="white" font-size="28" font-weight="bold">!</text>
+          <circle cx="180" cy="330" r="15" fill="#10b981"/>
+          <circle cx="330" cy="330" r="15" fill="#f59e0b"/>
+        </svg>
+      `;
+
+      sizes.forEach(size => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, size, size);
+          const pngUrl = canvas.toDataURL('image/png');
+          generatedIcons[size] = pngUrl;
+          
+          const item = document.createElement('div');
+          item.className = 'icon-item';
+          item.innerHTML = `
+            <img src="${pngUrl}" width="${size > 192 ? 192 : size}" alt="${size}x${size}">
+            <span>pwa-${size}x${size}.png</span>
+            <br>
+            <a href="${pngUrl}" download="pwa-${size}x${size}.png" style="color: #3b82f6; font-size: 12px;">下载</a>
+          `;
+          container.appendChild(item);
+        };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgContent);
+      });
+    }
+
+    function downloadAll() {
+      if (Object.keys(generatedIcons).length === 0) {
+        alert('请先点击"生成图标"');
+        return;
+      }
+      
+      sizes.forEach((size, index) => {
+        setTimeout(() => {
+          const link = document.createElement('a');
+          link.href = generatedIcons[size];
+          link.download = `pwa-${size}x${size}.png`;
+          link.click();
+        }, index * 200);
+      });
+    }
+
+    // 页面加载时自动生成
+    window.onload = generateIcons;
+  </script>
+</body>
+</html>
