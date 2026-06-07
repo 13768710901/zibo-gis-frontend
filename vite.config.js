@@ -96,16 +96,28 @@ export default defineConfig({
     proxy: {
       // 让前端以 /api 开头的请求走 .NET 后端（解决 CORS + 统一代理）
       '/api': {
-        target: 'https://localhost:7274',
+        target: 'https://zibo-gis-backend.onrender.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       },
       // 图片上传目录代理到后端
       '/uploads': {
-        target: 'https://localhost:7274',
+        target: 'https://zibo-gis-backend.onrender.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
     },
   },
+  // 生产环境配置
+  base: '/',
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'cesium': ['cesium'],
+        }
+      }
+    }
+  }
 })

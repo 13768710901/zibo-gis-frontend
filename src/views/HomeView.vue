@@ -488,7 +488,8 @@ const handleResize = () => {
 const loadFacilityStats = async () => {
   try {
     console.log('开始加载设施数据')
-    const resp = await axios.get('/api/facilities')
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+    const resp = await axios.get(`${API_BASE}/facilities`)
     const arr = Array.isArray(resp.data) ? resp.data : []
 
     console.log('原始设施数据:', arr)

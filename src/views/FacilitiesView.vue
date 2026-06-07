@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
 const router = useRouter()
 
 const loading = ref(false)
@@ -141,7 +143,7 @@ const fetchFacilities = async () => {
   loading.value = true
   error.value = ''
   try {
-    const resp = await axios.get('/api/facilities')
+    const resp = await axios.get(`${API_BASE}/facilities`)
     const arr = Array.isArray(resp.data) ? resp.data : []
     // 兼容后端返回 lon/lat 字段，将其规范为 longitude/latitude，便于表格展示和三维地图使用
     facilities.value = arr.map((f) => ({
@@ -326,7 +328,7 @@ const importFromCsv = async (event) => {
     let failed = 0
     for (const facility of facilitiesToAdd) {
       try {
-        await axios.post('/api/facilities', facility)
+        await axios.post(`${API_BASE}/facilities`, facility)
         success++
       } catch (e) {
         failed++
@@ -373,7 +375,7 @@ const editCoordinates = async (item) => {
   }
 
   try {
-    await axios.put(`/api/facilities/${item.id}`, {
+    await axios.put(`${API_BASE}/facilities/${item.id}`, {
       name: item.name,
       type: item.type,
       longitude: newLon,
@@ -470,7 +472,7 @@ const removeFacility = async (id) => {
   const removed = facilities.value[idx]
 
   try {
-    await axios.delete(`/api/facilities/${id}`)
+    await axios.delete(`${API_BASE}/facilities/${id}`)
   } catch (e) {
     console.error('删除设施失败', e)
     return
@@ -520,7 +522,7 @@ const addLocalFacility = async () => {
   const [lon, lat] = useGcj.value ? gcj02ToWgs84(rawLon, rawLat) : [rawLon, rawLat]
   try {
     // 调用后端接口写入数据库
-    const resp = await axios.post('/api/facilities', {
+    const resp = await axios.post(`${API_BASE}/facilities`, {
       name: newFacility.value.name,
       type: newFacility.value.type,
       longitude: lon,

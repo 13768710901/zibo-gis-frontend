@@ -314,9 +314,9 @@ const getLocation = () => {
       alert(msg)
     },
     {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
+      enableHighAccuracy: true,  // 启用高精度定位
+      timeout: 10000,             // 10秒超时
+      maximumAge: 0              // 不使用缓存位置
     }
   )
 }

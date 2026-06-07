@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import FacilitiesView from '../views/FacilitiesView.vue'
 import MapView from '../views/MapView.vue'
@@ -12,7 +12,7 @@ import SettingsView from '../views/SettingsView.vue'
 import { isMobileDevice, isRouteAllowedForMobile } from '../utils/deviceUtils.js'
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/login' },
     { path: '/login', name: 'login', component: LoginView, meta: { guest: true } },
@@ -20,7 +20,7 @@ const router = createRouter({
     { path: '/map', name: 'map', component: MapView, meta: { requiresAuth: true } },
     { path: '/route', name: 'route', component: RouteView, meta: { requiresAuth: true } },
     { path: '/facilities', name: 'facilities', component: FacilitiesView, meta: { requiresAuth: true } },
-    { path: '/disaster-report', name: 'disaster-report', component: DisasterReportView, meta: { requiresAuth: true } },
+    { path: '/disaster-report', name: 'disaster-report', component: DisasterReportView, meta: { requiresAuth: true, mobileStandalone: true } },
     { path: '/disaster-manage', name: 'disaster-manage', component: DisasterManageView, meta: { requiresAuth: true } },
     { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
     { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },

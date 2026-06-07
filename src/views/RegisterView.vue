@@ -80,8 +80,9 @@ const error = ref('')
 
 // 自动登录
 const autoLogin = async () => {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
   try {
-    const loginResponse = await axios.post('/api/auth/login', {
+    const loginResponse = await axios.post(`${API_BASE}/auth/login`, {
       username: form.value.username,
       password: form.value.password
     })
@@ -127,17 +128,38 @@ const handleRegister = async () => {
   
   loading.value = true
   error.value = ''
-  
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
   try {
-    const response = await axios.post('/api/auth/register', {
+    const response = await axios.post(`${API_BASE}/auth/register`, {
       username: form.value.username,
       password: form.value.password,
-      realName: form.value.username
+      email: form.value.email || null
     })
-    
+
     if (response.data.success) {
-      // 注册成功，自动登录
-      await autoLogin()
+      // 注册成功后自动登录
+      const loginResponse = await axios.post(`${API_BASE}/auth/login`, {
+        username: form.value.username,
+        password: form.value.password
+      })
+
+      if (loginResponse.data.success) {
+        // 保存token和用户信息到sessionStorage（关闭标签页即退出）
+        sessionStorage.setItem('token', loginResponse.data.token)
+        sessionStorage.setItem('user', JSON.stringify(loginResponse.data.user))
+        
+        // 触发登录状态更新事件
+        window.dispatchEvent(new CustomEvent('login-success', {
+          detail: loginResponse.data.user
+        }))
+        
+        // 跳转到首页
+        router.push('/home')
+      } else {
+        error.value = loginResponse.data.message || '注册失败'
+      }
     } else {
       error.value = response.data.message || '注册失败'
     }

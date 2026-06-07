@@ -82,6 +82,8 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
 const user = ref({
   username: '',
   realName: '',
@@ -106,7 +108,7 @@ const fetchUserProfile = async () => {
     const token = sessionStorage.getItem('token')
     if (!token) return
 
-    const response = await axios.get('/api/auth/me', {
+    const response = await axios.get(`${API_BASE}/auth/me`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -172,7 +174,7 @@ const saveProfile = async () => {
 
   try {
     const token = sessionStorage.getItem('token')
-    const response = await axios.put('/api/auth/profile', {
+    const response = await axios.put(`${API_BASE}/auth/profile`, {
       phone: editForm.value.phone || null,
       email: editForm.value.email || null
     }, {

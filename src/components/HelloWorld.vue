@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue'
 import axios from 'axios'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
 defineProps({
   msg: String,
 })
@@ -13,8 +15,7 @@ const error = ref('')
 onMounted(async () => {
   loading.value = true
   try {
-    // TODO: 如果端口不同，请将下面的地址改成你后端实际运行地址
-    const res = await axios.get('/api/facilities')
+    const res = await axios.get(`${API_BASE}/facilities`)
     facilities.value = res.data
   } catch (e) {
     console.error(e)

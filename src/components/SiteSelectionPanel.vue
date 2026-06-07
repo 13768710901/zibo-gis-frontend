@@ -2,6 +2,8 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
 const props = defineProps({
   loading: Boolean,
   results: Object
@@ -32,7 +34,7 @@ const runAnalysis = async () => {
     // 获取当前地图视野范围（简化为张店区范围）
     const bounds = [117.95, 36.75, 118.15, 36.90] // [minLon, minLat, maxLon, maxLat]
     
-    const response = await axios.post('/api/siteselection/analyze', {
+    const response = await axios.post(`${API_BASE}/siteselection/analyze`, {
       facilityType: selectedType.value,
       gridSizeMeters: gridSize.value,
       bounds: bounds,

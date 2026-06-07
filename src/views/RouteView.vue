@@ -3043,7 +3043,21 @@ const getAllRoutePlans = async () => {
 }
 
 // 增强的公交路线规划
+let _enhancedTransitPromise = null
 const getEnhancedTransitRoutes = async (startPoint, endPoint) => {
+  if (_enhancedTransitPromise) {
+    console.log('[getEnhancedTransitRoutes] 已在执行中，等待完成')
+    return _enhancedTransitPromise
+  }
+  _enhancedTransitPromise = _doEnhancedTransitRoutes(startPoint, endPoint)
+  try {
+    return await _enhancedTransitPromise
+  } finally {
+    _enhancedTransitPromise = null
+  }
+}
+
+const _doEnhancedTransitRoutes = async (startPoint, endPoint) => {
   try {
     // 1. 获取基础公交路线
     const basicData = await getSingleRoutePlan('transit', startPoint, endPoint);
@@ -3813,8 +3827,8 @@ const processRouteResults = async (data, mode) => {
               processedRouteKeys.add(signature)
               const routeResult = await processTransitData(transit, routePlanning.value.startPoint, routePlanning.value.endPoint)
               if (routeResult) {
-                // 打印识别后的关键字段，确认属性是否存在
-                console.log(`方案处理完成，识别到的换乘点数: ${routeResult.allStations.filter(s => s.isTransferOption).length}`)
+                const transferStations = routeResult.allStations ? routeResult.allStations.filter(s => s.isTransferOption) : []
+                console.log(`方案处理完成，识别到的换乘点数: ${transferStations.length}`)
 
                 // 核心修复：先推入，再强制更新视图
                 routeResults.value.push(routeResult)
@@ -3854,7 +3868,6 @@ const processRouteResults = async (data, mode) => {
 
         if (routeResults.value.length === 0) {
           console.error('没有成功处理任何公交方案')
-          alert('公交方案处理失败')
           showRouteResults.value = false
           return
         }
@@ -3890,7 +3903,7 @@ const processRouteResults = async (data, mode) => {
 
         if (routeResults.value.length === 0) {
           console.error('没有成功处理任何路径方案')
-          alert('路径方案处理失败')
+          console.error('路径方案处理失败')
           return
         }
 
@@ -4573,7 +4586,8 @@ const fetchBusLineStops = async (lineName, cityName = '淄博', hint = {}) => {
     }
 
     // 优先走后端代理，避免前端直连导致 CORS/限流
-    const url = `/api/amap/bus/linename?keywords=${encodeURIComponent(kw)}&city=${encodeURIComponent(cityName)}&extensions=all&offset=10&page=1&output=json`
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+    const url = `${apiBase}/amap/bus/linename?keywords=${encodeURIComponent(kw)}&city=${encodeURIComponent(cityName)}&extensions=all&offset=10&page=1&output=json`
     const doRequest = async () => {
       let data = null
       let transport = 'fetch'
@@ -4584,10 +4598,10 @@ const fetchBusLineStops = async (lineName, cityName = '淄博', hint = {}) => {
         data = isJson ? await resp.json() : null
 
         if (resp.status === 429) {
-          busLineApiLimitedUntil = Date.now() + 10 * 60 * 1000 // 10分钟
+          busLineApiLimitedUntil = Date.now() + 5 * 1000 // 5秒（QPS限流只需等几秒即可恢复）
           if (Date.now() - busLineApiLimitLogAt > 30 * 1000) {
             busLineApiLimitLogAt = Date.now()
-            console.warn(`[bus/linename] 触发限流熔断：HTTP 429（后端判定 infocode=10021），10分钟内跳过全站点增强识别（仍保留基础重合识别）。`)
+            console.warn(`[bus/linename] 触发限流熔断：HTTP 429（后端判定 infocode=10021），5秒后重试。`)
           }
           return []
         }
@@ -4610,10 +4624,10 @@ const fetchBusLineStops = async (lineName, cityName = '淄博', hint = {}) => {
         console.warn(msg)
         // 限流/配额超限：熔断一段时间，避免持续请求
         if (String(data?.infocode) === '10021' || String(data?.info || '').includes('CUQPS_HAS_EXCEEDED_THE_LIMIT')) {
-          busLineApiLimitedUntil = Date.now() + 10 * 60 * 1000 // 10分钟
+          busLineApiLimitedUntil = Date.now() + 5 * 1000 // 5秒
           if (Date.now() - busLineApiLimitLogAt > 30 * 1000) {
             busLineApiLimitLogAt = Date.now()
-            console.warn(`[bus/linename] 触发限流熔断：infocode=10021，10分钟内跳过全站点增强识别（仍保留基础重合识别）。`)
+            console.warn(`[bus/linename] 触发限流熔断：infocode=10021，5秒后重试。`)
           }
         }
         return []
@@ -5057,7 +5071,15 @@ const highlightSimpleAlternativeRoute = (index) => {
 }
 
 // 清除路线图层
+let _currentInfoWindow = null
 const clearRouteLayers = () => {
+  // 关闭所有 InfoWindow
+  if (_currentInfoWindow) {
+    try { _currentInfoWindow.close() } catch (e) {}
+    _currentInfoWindow = null
+  }
+  amapInstance.clearInfoWindow()
+
   // 正确清理并重置 routeLayers 的引用（原先 layer = null 不会回写到对象属性）
   Object.keys(routeLayers).forEach((key) => {
     const layer = routeLayers[key]
@@ -6511,10 +6533,8 @@ const initMap = async () => {
       })
 
       // 添加控件
-      amapInstance.addControl(new AMap.Scale())
-
-      // 加载并添加ToolBar
-      window.AMap.plugin(['AMap.ToolBar'], () => {
+      window.AMap.plugin(['AMap.Scale', 'AMap.ToolBar'], () => {
+        amapInstance.addControl(new window.AMap.Scale())
         const toolBar = new window.AMap.ToolBar({
           position: 'LB'
         })
@@ -7304,12 +7324,16 @@ const switchBase = async (type) => {
   top: 20px;
   right: 20px;
   width: 320px;
+  max-height: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(8px);
   z-index: 1000;
+  overflow: hidden;
 }
 
 .card-header {
@@ -7326,13 +7350,17 @@ const switchBase = async (type) => {
 
 .card-content {
   padding: 20px;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
 }
 
 .input-group {
   margin-bottom: 16px;
   position: relative;
   overflow: visible;
+  flex-shrink: 0;
 }
 
 .input-group label {
@@ -7530,6 +7558,10 @@ const switchBase = async (type) => {
   overflow: hidden;
   border: 1px solid rgba(59, 130, 246, 0.2);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
 .results-header {
@@ -7570,9 +7602,10 @@ const switchBase = async (type) => {
 }
 
 .results-list {
-  max-height: 350px;
   overflow-y: auto;
   padding: 8px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* 自定义滚动条 */
@@ -7728,6 +7761,8 @@ const switchBase = async (type) => {
 .bus-lines-detail {
   margin-top: 12px;
   padding-left: 4px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 /* 换乘站选择器 */
@@ -7884,6 +7919,8 @@ const switchBase = async (type) => {
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 自定义换乘站选择器 */
@@ -8019,9 +8056,10 @@ const switchBase = async (type) => {
 }
 
 .stations-list {
-  max-height: 400px;
   overflow-y: auto;
   padding: 16px 20px;
+  flex: 1;
+  min-height: 0;
 }
 
 .station-item {

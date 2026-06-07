@@ -21,7 +21,7 @@ const AMAP_DIRECTION_KEY = '0b440760c47124fdfe1d1a4961f6d4dc'
 const AMAP_ROUTE_CONCURRENCY = 3 // 高德路径规划并发上限
 
 // API基础地址
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://zibo-gis-backend.onrender.com/api'
 
 const mapContainer = ref(null)
 let viewer
@@ -202,6 +202,18 @@ async function loadFacilities() {
   } catch (err) {
     console.error('加载设施数据失败（地图）', err)
   }
+}
+
+async function reloadFacilities() {
+  if (!viewer) return
+  const entitiesToRemove = viewer.entities.values.filter((e) => {
+    const cat = e.properties?.category?.getValue()
+    return !!cat
+  })
+  entitiesToRemove.forEach((e) => viewer.entities.remove(e))
+  facilitiesLoaded = false
+  await loadFacilities()
+  facilitiesLoaded = true
 }
 
 // 安全移除数据源的辅助函数
@@ -3036,7 +3048,7 @@ async function runSiteSelectionAnalysis(params) {
   clearSiteSelection()
   
   try {
-    const response = await axios.post('/api/siteselection/analyze', {
+    const response = await axios.post(`${API_BASE}/siteselection/analyze`, {
       facilityType: params.facilityType || 'hospital',
       gridSizeMeters: params.gridSizeMeters || 1000,
       bounds: params.bounds || [117.95, 36.75, 118.15, 36.90],
@@ -3715,13 +3727,6 @@ function focusDisaster(disaster) {
 }
 
 // 监听灾情聚焦事件
-function onDisasterFocus(evt) {
-  const detail = evt.detail
-  if (!detail) return
-  
-  focusDisaster(detail)
-}
-
 defineExpose({
   resetView,
   startDistanceMeasure,
@@ -3747,6 +3752,7 @@ defineExpose({
   setViewshedVisible,
   loadOsmBuildings,
   getOSMBuildingNames,
+  reloadFacilities,
   getViewer: () => viewer,
   getHeatmapData: () => heatmapDataSource?.entities?.values?.map(e => ({
     id: e.id,
@@ -3756,10 +3762,80 @@ defineExpose({
   })) || []
 })
 
+// ==================== 灾情定位处理 ====================
+
+const handleDisasterFocus = (event) => {
+  const { lon, lat, impactRadius, status } = event.detail
+  console.log('[CesiumMap] 灾情定位:', { lon, lat, impactRadius, status })
+
+  if (!viewer) {
+    console.error('[CesiumMap] viewer不存在')
+    return
+  }
+
+  const radius = impactRadius || 100
+  const height = Math.max(radius * 3, 500)
+  const destination = Cesium.Cartesian3.fromDegrees(lon, lat, height)
+
+ 
+
+  // 如果是已驳回的灾情，临时添加标记
+  let tempMarker = null
+  if (status === '已驳回') {
+    tempMarker = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(lon, lat, 0),
+      point: {
+        pixelSize: 20,
+        color: Cesium.Color.RED,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2
+      },
+      label: {
+        text: '已驳回灾情',
+        font: '16px sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        pixelOffset: new Cesium.Cartesian2(0, -20)
+      }
+    })
+  }
+
+  // 解锁相机，解决flyTo失效问题
+  viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY)
+
+  viewer.camera.flyTo({
+    destination: destination,
+    orientation: {
+      heading: Cesium.Math.toRadians(180),
+      pitch: Cesium.Math.toRadians(-80),
+      roll: 0
+    },
+    duration: 1.5,
+    cancelAnimation: true,
+    complete: () => {
+      console.log('[CesiumMap] 飞行完成')
+      // 5秒后移除临时标记
+      if (tempMarker) {
+        setTimeout(() => {
+          viewer.entities.remove(tempMarker)
+        }, 5000)
+      }
+    }
+  })
+
+  console.log('[CesiumMap] flyTo命令已发送')
+}
+
 onMounted(async () => {
   if (!mapContainer.value) return
 
   const container = mapContainer.value
+  
+  // 添加灾情定位事件监听
+  window.addEventListener('disaster-focus', handleDisasterFocus)
   
   // 使用 ResizeObserver 等待容器获得有效尺寸
   const waitForSize = () => new Promise((resolve) => {
@@ -4019,7 +4095,6 @@ onMounted(async () => {
   window.addEventListener('facility-removed', onFacilityRemoved)
 
   // 监听灾情聚焦和刷新事件
-  window.addEventListener('disaster-focus', onDisasterFocus)
   window.addEventListener('disaster-refresh', loadDisasters)
 
   // 初始加载灾情数据
@@ -4239,6 +4314,9 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  // 移除灾情定位事件监听
+  window.removeEventListener('disaster-focus', handleDisasterFocus)
+  
   // 清理resize handler和observer
   if (mapContainer.value) {
     const container = mapContainer.value
@@ -4277,7 +4355,6 @@ onBeforeUnmount(() => {
       window.removeEventListener('facility-focus', onFacilityFocused)
     }
     // 移除灾情事件监听
-    window.removeEventListener('disaster-focus', onDisasterFocus)
     window.removeEventListener('disaster-refresh', loadDisasters)
   }
 })

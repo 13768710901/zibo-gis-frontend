@@ -5,150 +5,153 @@
         <h2>三维可视化分析</h2>
         <span class="panel-title">图层控制</span>
       </div>
-      <div class="map-toolbar">
-        <!-- 基础工具 -->
-        <button class="tool-btn" title="定位" @click="handleToolClick('location')">
-          <span class="tool-icon">📍</span>
-          <span class="tool-name">定位</span>
-        </button>
-        <button class="tool-btn" title="重置视图" @click="handleToolClick('reset')">
-          <span class="tool-icon">🏠</span>
-          <span class="tool-name">重置视图</span>
-        </button>
-
-        <!-- 测量工具主按钮 -->
-        <button
-          class="tool-btn measure-main-btn"
-          :class="{ 'layer-active': measureDrawerOpen }"
-          @click="toggleMeasureDrawer"
-        >
-          <span class="tool-icon">📐</span>
-          <span class="tool-name">测量工具</span>
-        </button>
-
-        <!-- 测量工具抽屉 -->
-        <div class="analysis-drawer" :class="{ expanded: measureDrawerOpen }">
-          <button class="tool-btn drawer-item" title="距离测量" @click="handleToolClick('measure'); closeAllDrawers()">
-            <span class="tool-icon">📏</span>
-            <span class="tool-name">距离测量</span>
+      <div class="map-toolbar-container">
+        <!-- 一级菜单栏 -->
+        <div class="map-toolbar primary-menu">
+          <!-- 基础工具 -->
+          <button class="tool-btn" title="定位" @click="handleToolClick('location')">
+            <span class="tool-icon">📍</span>
+            <span class="tool-name">定位</span>
           </button>
-          <button class="tool-btn drawer-item" title="面积测量" @click="handleToolClick('area'); closeAllDrawers()">
+          <button class="tool-btn" title="重置视图" @click="handleToolClick('reset')">
+            <span class="tool-icon">🏠</span>
+            <span class="tool-name">重置视图</span>
+          </button>
+
+          <!-- 一级菜单按钮 -->
+          <button
+            class="tool-btn primary-menu-btn"
+            :class="{ 'layer-active': activePrimaryMenu === 'measure' }"
+            @click="setPrimaryMenu('measure')"
+          >
             <span class="tool-icon">📐</span>
-            <span class="tool-name">面积测量</span>
+            <span class="tool-name">测量工具</span>
           </button>
-          <button class="tool-btn drawer-item" title="清除绘制" @click="handleToolClick('clear'); closeAllDrawers()">
-            <span class="tool-icon">🧹</span>
-            <span class="tool-name">清除绘制</span>
+
+          <button
+            class="tool-btn primary-menu-btn"
+            :class="{ 'layer-active': activePrimaryMenu === 'spatial' }"
+            @click="setPrimaryMenu('spatial')"
+          >
+            <span class="tool-icon">📊</span>
+            <span class="tool-name">空间分析</span>
+          </button>
+
+          <button
+            class="tool-btn"
+            :class="{ 'layer-active': showSiteSelectionPanel }"
+            title="选址模拟"
+            @click="toggleSiteSelectionPanel"
+          >
+            <span class="tool-icon">📍</span>
+            <span class="tool-name">选址模拟</span>
+          </button>
+
+          <button
+            class="tool-btn"
+            :class="{ 'layer-active': showDisasterPanel }"
+            title="灾情管理"
+            @click="toggleDisasterPanel"
+          >
+            <span class="tool-icon">🚨</span>
+            <span class="tool-name">灾情管理</span>
+          </button>
+
+          <!-- 图层控制：始终在最右边 -->
+          <button
+            class="tool-btn"
+            :class="{ 'layer-active': layerPanelOpen }"
+            title="图层控制"
+            @click="toggleLayerPanel"
+          >
+            <span class="tool-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="9"></line>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+              </svg>
+            </span>
+            <span class="tool-name">图层</span>
           </button>
         </div>
 
-        <!-- 空间分析主按钮 -->
-        <button
-          class="tool-btn spatial-main-btn"
-          :class="{ 'layer-active': spatialDrawerOpen }"
-          @click="toggleSpatialDrawer"
-        >
-          <span class="tool-icon">📊</span>
-          <span class="tool-name">空间分析</span>
-        </button>
+        <!-- 二级菜单栏 -->
+        <div class="map-toolbar secondary-menu" v-show="activePrimaryMenu">
+          <!-- 测量工具二级菜单 -->
+          <template v-if="activePrimaryMenu === 'measure'">
+            <button class="tool-btn secondary-menu-btn" :class="{ 'layer-active': measureActive === 'distance' }" @click="handleToolClick('measure'); measureActive = 'distance'">
+              <span class="tool-icon">📏</span>
+              <span class="tool-name">距离测量</span>
+            </button>
+            <button class="tool-btn secondary-menu-btn" :class="{ 'layer-active': measureActive === 'area' }" @click="handleToolClick('area'); measureActive = 'area'">
+              <span class="tool-icon">📐</span>
+              <span class="tool-name">面积测量</span>
+            </button>
+            <button class="tool-btn secondary-menu-btn" @click="handleToolClick('clear')">
+              <span class="tool-icon">🧹</span>
+              <span class="tool-name">清除绘制</span>
+            </button>
+          </template>
 
-        <!-- 空间分析抽屉 -->
-        <div class="analysis-drawer spatial-drawer" :class="{ expanded: spatialDrawerOpen }">
-          <!-- 平面分析二级按钮 -->
-          <button
-            class="tool-btn drawer-item"
-            :class="{ 'layer-active': planarDrawerOpen }"
-            @click="togglePlanarDrawer"
-          >
-            <span class="tool-icon">🔍</span>
-            <span class="tool-name">平面分析</span>
-          </button>
-
-          <!-- 平面分析三级抽屉 -->
-          <div class="analysis-drawer sub-drawer" :class="{ expanded: planarDrawerOpen }">
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': heatmapVisible }" @click="toggleHeatmap">
-              <span class="tool-icon">🔥</span>
-              <span class="tool-name">热力图</span>
-            </button>
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': coverageVisible }" @click="toggleCoverage">
-              <span class="tool-icon">📍</span>
-              <span class="tool-name">覆盖范围</span>
-            </button>
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': accessibilityVisible }" @click="toggleAccessibility">
-              <span class="tool-icon">🚶</span>
-              <span class="tool-name">可达性</span>
-            </button>
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': isochroneVisible }" @click="toggleIsochrone">
-              <span class="tool-icon">⏱️</span>
-              <span class="tool-name">等时圈</span>
-            </button>
-          </div>
-
-          <!-- 三维分析二级按钮（控制建筑显示/隐藏） -->
-          <button
-            class="tool-btn drawer-item"
-            :class="{ 'layer-active': analysis3DActive }"
-            @click="toggle3DAnalysis"
-          >
-            <span class="tool-icon">🗺️</span>
-            <span class="tool-name">三维分析</span>
-          </button>
-
-          <!-- 三维分析三级抽屉 -->
-          <div class="analysis-drawer sub-drawer" :class="{ expanded: analysis3DDrawerOpen }">
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': viewshedVisible }" @click="toggleViewshed">
-              <span class="tool-icon">👁️</span>
-              <span class="tool-name">视域分析</span>
-            </button>
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': visibilityActive }" @click="toggleVisibility">
+          <!-- 空间分析二级菜单 -->
+          <template v-if="activePrimaryMenu === 'spatial'">
+            <!-- 平面分析按钮 -->
+            <button
+              class="tool-btn secondary-menu-btn"
+              :class="{ 'layer-active': spatialActive === 'planar' }"
+              @click="togglePlanarDrawer"
+            >
               <span class="tool-icon">🔍</span>
-              <span class="tool-name">通视分析</span>
+              <span class="tool-name">平面分析</span>
             </button>
-            <button class="tool-btn drawer-item" :class="{ 'layer-active': profileActive }" @click="toggleProfile">
-              <span class="tool-icon">📈</span>
-              <span class="tool-name">剖面分析</span>
+
+            <!-- 平面分析三级菜单 -->
+            <div class="analysis-drawer sub-drawer" :class="{ expanded: planarDrawerOpen }">
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': heatmapVisible }" @click="toggleHeatmap">
+                <span class="tool-icon">🔥</span>
+                <span class="tool-name">热力图</span>
+              </button>
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': coverageVisible }" @click="toggleCoverage">
+                <span class="tool-icon">📍</span>
+                <span class="tool-name">覆盖范围</span>
+              </button>
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': accessibilityVisible }" @click="toggleAccessibility">
+                <span class="tool-icon">🚶</span>
+                <span class="tool-name">可达性</span>
+              </button>
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': isochroneVisible }" @click="toggleIsochrone">
+                <span class="tool-icon">⏱️</span>
+                <span class="tool-name">等时圈</span>
+              </button>
+            </div>
+
+            <!-- 三维分析按钮 -->
+            <button
+              class="tool-btn secondary-menu-btn"
+              :class="{ 'layer-active': spatialActive === '3d' }"
+              @click="toggle3DAnalysis"
+            >
+              <span class="tool-icon">🗺️</span>
+              <span class="tool-name">三维分析</span>
             </button>
-          </div>
+
+            <!-- 三维分析三级菜单 -->
+            <div class="analysis-drawer sub-drawer" :class="{ expanded: analysis3DDrawerOpen }">
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': viewshedVisible }" @click="toggleViewshed">
+                <span class="tool-icon">👁️</span>
+                <span class="tool-name">视域分析</span>
+              </button>
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': visibilityActive }" @click="toggleVisibility">
+                <span class="tool-icon">🔍</span>
+                <span class="tool-name">通视分析</span>
+              </button>
+              <button class="tool-btn drawer-item" :class="{ 'layer-active': profileActive }" @click="toggleProfile">
+                <span class="tool-icon">📈</span>
+                <span class="tool-name">剖面分析</span>
+              </button>
+            </div>
+          </template>
         </div>
-
-        <!-- 灾情管理 -->
-        <button
-          class="tool-btn"
-          :class="{ 'layer-active': showDisasterPanel }"
-          title="灾情管理"
-          @click="toggleDisasterPanel"
-        >
-          <span class="tool-icon">🚨</span>
-          <span class="tool-name">灾情监测</span>
-        </button>
-
-        <!-- 设施选址模拟 -->
-        <button
-          class="tool-btn"
-          :class="{ 'layer-active': showSiteSelectionPanel }"
-          title="选址模拟"
-          @click="toggleSiteSelectionPanel"
-        >
-          <span class="tool-icon">📍</span>
-          <span class="tool-name">选址模拟</span>
-        </button>
-
-        <!-- 图层控制：始终在最右边 -->
-        <button
-          class="tool-btn"
-          :class="{ 'layer-active': layerPanelOpen }"
-          title="图层控制"
-          @click="toggleLayerPanel"
-        >
-          <span class="tool-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="9" y1="9" x2="15" y2="9"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
-          </span>
-          <span class="tool-name">图层</span>
-        </button>
       </div>
     </header>
 
@@ -700,9 +703,12 @@ let visibilityObserverEntity = null // 观察点实体
 let visibilityTargetEntity = null // 目标点实体
 let visibilityBlockPointEntity = null // 遮挡点实体
 
-// ==================== 抽屉式菜单变量 ====================
-const measureDrawerOpen = ref(false) // 测量工具抽屉展开状态
-const spatialDrawerOpen = ref(false) // 空间分析抽屉展开状态
+// ==================== 菜单状态变量 ====================
+const activePrimaryMenu = ref('') // 当前激活的一级菜单：'measure' | 'spatial' | ''
+const measureActive = ref('') // 测量工具二级菜单激活状态：'distance' | 'area' | ''
+const spatialActive = ref('') // 空间分析二级菜单激活状态：'planar' | '3d' | ''
+
+// ==================== 抽屉式菜单变量（保留用于三级菜单） ====================
 const planarDrawerOpen = ref(false) // 平面分析三级抽屉展开状态
 const analysis3DDrawerOpen = ref(false) // 三维分析三级抽屉展开状态
 
@@ -972,15 +978,71 @@ function checkOSMBuildingsExist(viewer) {
   return result.hasOSM && result.hasSufficientCoverage
 }
 
-// ==================== 抽屉式菜单控制函数 ====================
+// ==================== 菜单控制函数 ====================
 const closeAllDrawers = () => {
-  measureDrawerOpen.value = false
-  spatialDrawerOpen.value = false
+  activePrimaryMenu.value = ''
+  measureActive.value = ''
+  spatialActive.value = ''
   planarDrawerOpen.value = false
   analysis3DDrawerOpen.value = false
-  
-  // 收起时回滚到最左边
-  scrollToolbar(0)
+}
+
+// ==================== 清除所有分析功能 ====================
+const clearAllAnalysis = () => {
+  // 清除平面分析功能
+  if (heatmapVisible.value) {
+    heatmapVisible.value = false
+    const map = mapRef.value
+    if (map && map.setHeatmapVisible) {
+      map.setHeatmapVisible(false, heatmapType.value)
+    }
+  }
+
+  if (coverageVisible.value) {
+    coverageVisible.value = false
+    coverageStats.value = null
+    coverageLoading.value = false
+    const map = mapRef.value
+    if (map && map.setCoverageVisible) {
+      map.setCoverageVisible(false)
+    }
+  }
+
+  if (accessibilityVisible.value) {
+    accessibilityVisible.value = false
+    accessibilityStats.value = null
+    accessibilityLoading.value = false
+    const map = mapRef.value
+    if (map && map.setAccessibilityVisible) {
+      map.setAccessibilityVisible(false)
+    }
+  }
+
+  if (isochroneVisible.value) {
+    isochroneVisible.value = false
+    isochroneStats.value = null
+    isochroneLoading.value = false
+    const map = mapRef.value
+    if (map && map.setIsochroneVisible) {
+      map.setIsochroneVisible(false)
+    }
+  }
+
+  // 清除三维分析功能
+  if (viewshedVisible.value) {
+    viewshedVisible.value = false
+    clearViewshed()
+  }
+
+  if (visibilityActive.value) {
+    visibilityActive.value = false
+    clearVisibility()
+  }
+
+  if (profileActive.value) {
+    profileActive.value = false
+    clearProfile()
+  }
 }
 
 // 工具栏滚动控制
@@ -991,54 +1053,106 @@ const scrollToolbar = (offset) => {
   }
 }
 
-const toggleMeasureDrawer = () => {
-  const wasOpen = measureDrawerOpen.value
-  closeAllDrawers()
-  measureDrawerOpen.value = !wasOpen
-  
-  // 展开时向左滚动让按钮穿进去，收起时回滚
-  setTimeout(() => {
-    scrollToolbar(measureDrawerOpen.value ? 150 : 0)
-  }, 50)
+// ==================== 一级菜单控制函数 ====================
+
+const setPrimaryMenu = (menu) => {
+  // 如果点击已激活的菜单，则关闭
+  if (activePrimaryMenu.value === menu) {
+    activePrimaryMenu.value = ''
+    measureActive.value = ''
+    spatialActive.value = ''
+    // 收起所有三级菜单
+    planarDrawerOpen.value = false
+    analysis3DDrawerOpen.value = false
+
+    // 关闭空间分析时，清除所有分析结果并恢复设施点
+    if (menu === 'spatial') {
+      clearAllAnalysis()
+      // 如果在三维分析中，恢复设施点
+      if (analysis3DActive.value) {
+        analysis3DActive.value = false
+        restorePointsAndBuildings()
+      }
+    }
+  } else {
+    // 切换到新菜单
+    activePrimaryMenu.value = menu
+    measureActive.value = ''
+    spatialActive.value = ''
+    // 收起所有三级菜单
+    planarDrawerOpen.value = false
+    analysis3DDrawerOpen.value = false
+  }
 }
 
-const toggleSpatialDrawer = () => {
-  const wasOpen = spatialDrawerOpen.value
-  closeAllDrawers()
-  spatialDrawerOpen.value = !wasOpen
-  
-  // 展开时向左滚动让按钮穿进去，收起时回滚
-  setTimeout(() => {
-    scrollToolbar(spatialDrawerOpen.value ? 200 : 0)
-  }, 50)
-}
+// ==================== 二级菜单控制函数 ====================
 
 const togglePlanarDrawer = () => {
-  // 关闭另一个三级抽屉
-  analysis3DDrawerOpen.value = false
-  planarDrawerOpen.value = !planarDrawerOpen.value
+  // 如果已经激活，再次点击则收起三级菜单并清除平面分析结果
+  if (spatialActive.value === 'planar' && planarDrawerOpen.value) {
+    planarDrawerOpen.value = false
+    spatialActive.value = ''
+    // 清除平面分析功能
+    if (heatmapVisible.value) {
+      heatmapVisible.value = false
+      const map = mapRef.value
+      if (map && map.setHeatmapVisible) map.setHeatmapVisible(false, heatmapType.value)
+    }
+    if (coverageVisible.value) {
+      coverageVisible.value = false
+      coverageStats.value = null
+      coverageLoading.value = false
+      const map = mapRef.value
+      if (map && map.setCoverageVisible) map.setCoverageVisible(false)
+    }
+    if (accessibilityVisible.value) {
+      accessibilityVisible.value = false
+      accessibilityStats.value = null
+      accessibilityLoading.value = false
+      const map = mapRef.value
+      if (map && map.setAccessibilityVisible) map.setAccessibilityVisible(false)
+    }
+    if (isochroneVisible.value) {
+      isochroneVisible.value = false
+      isochroneStats.value = null
+      isochroneLoading.value = false
+      const map = mapRef.value
+      if (map && map.setIsochroneVisible) map.setIsochroneVisible(false)
+    }
+  } else {
+    planarDrawerOpen.value = true
+    spatialActive.value = 'planar'
+  }
 }
 
-const toggleAnalysis3DDrawer = () => {
-  // 关闭另一个三级抽屉
-  planarDrawerOpen.value = false
-  analysis3DDrawerOpen.value = !analysis3DDrawerOpen.value
-}
-
-// ==================== 三维建筑分析控制函数 ====================
-
-/**
- * 切换三维分析模式（控制建筑显示/隐藏）
- */
 const toggle3DAnalysis = () => {
-  analysis3DActive.value = !analysis3DActive.value
+  // 如果已经激活，再次点击则收起三级菜单并清除三维分析结果
+  if (spatialActive.value === '3d' && analysis3DDrawerOpen.value) {
+    analysis3DDrawerOpen.value = false
+    spatialActive.value = ''
+    // 清除三维分析功能
+    if (viewshedVisible.value) {
+      viewshedVisible.value = false
+      clearViewshed()
+    }
+    if (visibilityActive.value) {
+      visibilityActive.value = false
+      clearVisibility()
+    }
+    if (profileActive.value) {
+      profileActive.value = false
+      clearProfile()
+    }
+    // 清除三维建筑并恢复设施点
+    analysis3DActive.value = false
+    restorePointsAndBuildings()
+  } else {
+    analysis3DDrawerOpen.value = true
+    spatialActive.value = '3d'
 
-  // 同时控制三级抽屉的展开
-  planarDrawerOpen.value = false
-  analysis3DDrawerOpen.value = analysis3DActive.value
+    // 三维分析功能：加载建筑
+    analysis3DActive.value = true
 
-  if (analysis3DActive.value) {
-    // 展开：加载建筑（如果未加载），然后淡出点、显示建筑
     if (!buildingsLoaded.value) {
       loadBuildings().then(() => {
         fadeOutPointsAndShowBuildings()
@@ -1046,11 +1160,6 @@ const toggle3DAnalysis = () => {
     } else {
       fadeOutPointsAndShowBuildings()
     }
-    console.log('[三维分析] 已激活，建筑已显示，点已淡出，三级抽屉已展开')
-  } else {
-    // 收起：恢复点、隐藏建筑
-    restorePointsAndBuildings()
-    console.log('[三维分析] 已关闭，已恢复原状，三级抽屉已收起')
   }
 }
 
@@ -1435,11 +1544,14 @@ function setViewshedVisible(visible) {
 
 // 切换视域分析
 function toggleViewshed() {
+  // 如果激活，先清除其他所有分析功能
+  if (!viewshedVisible.value) {
+    clearAllAnalysis()
+  }
   viewshedVisible.value = !viewshedVisible.value
   console.log('[toggleViewshed] 视域分析状态切换为:', viewshedVisible.value)
   setViewshedVisible(viewshedVisible.value)
-  // 关闭所有抽屉
-  closeAllDrawers()
+  // 不关闭菜单，保持展开状态方便切换功能
 }
 
 // 清除视域分析结果
@@ -2060,6 +2172,10 @@ const toggleAnalysis3D = () => {
 
 
 const toggleVisibility = () => {
+  // 如果激活，先清除其他所有分析功能
+  if (!visibilityActive.value) {
+    clearAllAnalysis()
+  }
   visibilityActive.value = !visibilityActive.value
 
   if (visibilityActive.value) {
@@ -2069,11 +2185,14 @@ const toggleVisibility = () => {
   } else {
     clearVisibility()
   }
-  // 关闭所有抽屉
-  closeAllDrawers()
+  // 不关闭菜单，保持展开状态方便切换功能
 }
 
 const toggleProfile = () => {
+  // 如果激活，先清除其他所有分析功能
+  if (!profileActive.value) {
+    clearAllAnalysis()
+  }
   profileActive.value = !profileActive.value
 
   if (profileActive.value) {
@@ -2083,18 +2202,21 @@ const toggleProfile = () => {
   } else {
     clearProfile()
   }
-  // 关闭所有抽屉
-  closeAllDrawers()
+  // 不关闭菜单，保持展开状态方便切换功能
 }
 
 const toggleHeatmap = () => {
+  // 如果激活，先清除其他所有分析功能
+  if (!heatmapVisible.value) {
+    clearAllAnalysis()
+  }
   heatmapVisible.value = !heatmapVisible.value
   console.log(`切换热力图: ${heatmapVisible.value}, 类型: ${heatmapType.value}`)
   const map = mapRef.value
   if (map && map.setHeatmapVisible) {
     map.setHeatmapVisible(heatmapVisible.value, heatmapType.value)
   }
-  closeAllDrawers()
+  // 不关闭菜单，保持展开状态方便切换功能
 }
 
 const setHeatmapType = (type) => {
@@ -2130,6 +2252,10 @@ const refreshCoverage = async () => {
 }
 
 const toggleCoverage = async () => {
+  // 如果激活，先清除其他所有分析功能
+  if (!coverageVisible.value) {
+    clearAllAnalysis()
+  }
   coverageVisible.value = !coverageVisible.value
   await refreshCoverage()
 }
@@ -2200,6 +2326,10 @@ const refreshIsochrone = async () => {
 }
 
 const toggleIsochrone = async () => {
+  // 如果激活，先清除其他所有分析功能
+  if (!isochroneVisible.value) {
+    clearAllAnalysis()
+  }
   isochroneVisible.value = !isochroneVisible.value
   const map = mapRef.value
   if (!map || !map.setIsochroneVisible) return
@@ -2222,6 +2352,10 @@ const focusIsochroneTopArrival = (item) => {
 }
 
 const toggleAccessibility = async () => {
+  // 如果激活，先清除其他所有分析功能
+  if (!accessibilityVisible.value) {
+    clearAllAnalysis()
+  }
   accessibilityVisible.value = !accessibilityVisible.value
   if (!accessibilityVisible.value) {
     accessibilityStats.value = null
@@ -2441,6 +2575,9 @@ const exportIsochrone = async (format = 'png') => {
     console.error('Export error:', e)
   }
 }
+
+// ==================== 灾情定位处理 ====================
+// 已移至CesiumMap.vue中处理
 
 // 组件挂载后设置初始可见类别
 onMounted(() => {
@@ -3142,8 +3279,8 @@ function clearVisibility() {
   display: flex;
   flex-direction: column;
   /* 固定在当前可视区域内，并预留出更多顶部/底部空间，避免出现整体上下滚动 */
-  height: calc(85vh - 120px);
-  min-height: 660px;
+  height: calc(70vh - 120px);
+  min-height: 540px;
   gap: 0.75rem;
   padding-bottom: 0.2rem; /* 预留一点空间，避免底部内容贴到浏览器/系统状态栏 */
   overflow: hidden;
@@ -3180,17 +3317,39 @@ function clearVisibility() {
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
-.map-toolbar {
+/* 菜单容器 */
+.map-toolbar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+/* 一级菜单栏 */
+.map-toolbar.primary-menu {
   display: flex;
   gap: 0.4rem;
   flex-wrap: nowrap;
   overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  flex: 1;
-  min-width: 0;
   align-items: center;
   justify-content: flex-end;
+}
+
+/* 二级菜单栏 */
+.map-toolbar.secondary-menu {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  align-items: center;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
 }
 
 .map-toolbar::-webkit-scrollbar {
@@ -3214,7 +3373,46 @@ function clearVisibility() {
   font-size: 0.8rem;
 }
 
-/* 抽屉式菜单样式 */
+/* 一级菜单按钮样式 */
+.primary-menu-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.primary-menu-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.primary-menu-btn.layer-active {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+}
+
+/* 二级菜单按钮样式 */
+.secondary-menu-btn {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+  transition: all 0.3s ease;
+}
+
+.secondary-menu-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.secondary-menu-btn.layer-active {
+  background: rgba(59, 130, 246, 0.4);
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #bfdbfe;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* 抽屉式菜单样式（三级菜单） */
 .analysis-drawer {
   display: flex;
   gap: 0.5rem;
@@ -3238,6 +3436,21 @@ function clearVisibility() {
   opacity: 0;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.analysis-drawer .drawer-item:hover {
+  background: rgba(34, 197, 94, 0.3);
+  transform: translateY(-1px);
+}
+
+.analysis-drawer .drawer-item.layer-active {
+  background: rgba(34, 197, 94, 0.4);
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #4ade80;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
 }
 
 .analysis-drawer.expanded .drawer-item:nth-child(1) {
@@ -3264,7 +3477,7 @@ function clearVisibility() {
   transition-delay: 0.2s;
 }
 
-/* 三级抽屉（嵌套在二级抽屉内） */
+/* 三级抽屉（嵌套在二级菜单内） */
 .analysis-drawer.sub-drawer {
   width: 0;
   transform: translateX(-20px);
@@ -3804,7 +4017,7 @@ function clearVisibility() {
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .disaster-panel-container.open {

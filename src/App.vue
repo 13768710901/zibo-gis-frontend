@@ -4,12 +4,16 @@ import { useRouter, useRoute } from 'vue-router'
 import WeatherWidget from './components/WeatherWidget.vue'
 import axios from 'axios'
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+
 const router = useRouter()
 const route = useRoute()
 
-// 判断是否为登录/注册页面（这些页面使用全屏独立布局）
+// 判断是否为全屏独立布局页面（登录/注册/移动端灾情上报）
 const isAuthPage = computed(() => {
-  return route.path === '/login' || route.path === '/register'
+  return route.path === '/login' || 
+         route.path === '/register' || 
+         (route.path === '/disaster-report' && route.meta.mobileStandalone)
 })
 const nowText = ref('')
 const weekdayText = ref('')
@@ -165,7 +169,7 @@ const getLocationErrorMessage = (error) => {
 // 搜索本地设施
 const searchLocalFacilities = async (query) => {
   try {
-    const response = await axios.get('/api/facilities')
+    const response = await axios.get(`${API_BASE}/facilities`)
     const facilities = Array.isArray(response.data) ? response.data : []
     
     const results = facilities
